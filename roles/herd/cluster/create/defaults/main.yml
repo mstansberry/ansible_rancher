@@ -11,6 +11,7 @@ cloud_credential_action: POST
 cloud_credential_status_code: 201
 
 rke_disable_ingress: false
+rke_opt_cluster_cni: default
 
 etcd_snapshot_retention: 12
 

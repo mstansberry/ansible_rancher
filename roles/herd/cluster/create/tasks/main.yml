@@ -7,10 +7,6 @@
       - rancher_server_api
       - api_token
       - cluster_name
-      - access_key
-      - secret_key
-      - bucket_name
-      - endpoint
       - rke_opt_cluster_cni
 
 - name: Check that CNI is in supported list
@@ -56,7 +52,10 @@
             accessKey: "{{ access_key }}"
             secretKey: "{{ secret_key }}"
         status_code: "{{ cloud_credential_status_code }}"
-  when: rke_cluster_type=='rke2'
+  when:
+    - rke_cluster_type=='rke2'
+    - access_key is defined
+    - secretKey is defined
 
 - name: "Create/update cluster '{{ cluster_name }}'"
   mstansberry.ansible_rancher.rancher_cluster:
