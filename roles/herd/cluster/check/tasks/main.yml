@@ -1,0 +1,27 @@
+---
+- name: Verify that required vars are defined and populated
+  include_role:
+    name: mstansberry.ansible_rancher.required_vars
+  vars:
+    required_vars:
+      - rancher_server_api
+      - api_token
+      - cluster_name
+
+- name: Check for existing cluster '{{ cluster_name }}'
+  mstansberry.ansible_rancher.rancher_cluster:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    cluster_name: "{{ cluster_name }}"
+    cluster_type: "{{ rke_cluster_type }}"
+  register: cluster_check_output
+  check_mode: true  # always run task in check_mode
+  delegate_to: localhost
+
+- name: Set cluster_id, cluster_current_config, and cluster_agent_command based on output
+  set_fact:
+    cluster_id: "{{ cluster_check_output.id }}"
+    cluster_state: "{{ cluster_check_output.state }}"
+    cluster_current_config: "{{ cluster_check_output.config }}"
+    cluster_agent_command: "{{ cluster_check_output.cluster_agent_command }}"
+  when: cluster_check_output.id is defined

@@ -1,0 +1,87 @@
+---
+- name: Verify that required vars are defined and populated
+  ansible.builtin.include_role:
+    name: mstansberry.ansible_rancher.required_vars
+  vars:
+    required_vars:
+      - rancher_server_api
+      - api_token
+      - cluster_name
+      - access_key
+      - secret_key
+      - bucket_name
+      - endpoint
+      - rke_opt_cluster_cni
+
+- name: Check that CNI is in supported list
+  ansible.builtin.assert:
+    that: rke_opt_cluster_cni is in supported_cnis
+    fail_msg: "rke_opt_cluster_cni must be one of {{ supported_cnis }}."
+
+- name: "Create/update '{{ cluster_cloud_credential }}' secret for RKE2 clusters"
+  block:
+    - name: "Check for existing '{{ cluster_cloud_credential }}' secret"
+      ansible.builtin.uri:
+        url: "{{ cloud_credential_url }}"
+        validate_certs: false
+        method: GET
+        return_content: true
+        headers:
+          Authorization: "Bearer {{ api_token }}"
+      ignore_errors: true
+      register: cloud_credential_output
+
+    - name: set_fact for update operation based on existing credential
+      ansible.builtin.set_fact:
+        cloud_credential_endpoint: "{{ cloud_credential_url }}"
+        cloud_credential_action: PUT
+        cloud_credential_metadata: "{{ cloud_credential_output.json.metadata }}"
+        cloud_credential_status_code: 200
+      when: cloud_credential_output is succeeded
+
+    - name: "Create/update '{{ cluster_cloud_credential }}' secret"
+      ansible.builtin.uri:
+        url: "{{ cloud_credential_endpoint }}"
+        validate_certs: false
+        method: "{{ cloud_credential_action }}"
+        headers:
+          Authorization: "Bearer {{ api_token }}"
+        body_format: json
+        body:
+          _type: Opaque
+          apiVersion: v1
+          kind: Secret
+          metadata: "{{ cloud_credential_metadata }}"
+          stringData:
+            accessKey: "{{ access_key }}"
+            secretKey: "{{ secret_key }}"
+        status_code: "{{ cloud_credential_status_code }}"
+  when: rke_cluster_type=='rke2'
+
+- name: "Create/update cluster '{{ cluster_name }}'"
+  mstansberry.ansible_rancher.rancher_cluster:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    cluster_name: "{{ cluster_name }}"
+    cluster_type: "{{ rke_cluster_type }}"
+    cluster_config: "{{ lookup('template', rke_config_name ~ '.yaml.j2') | from_yaml }}"
+  register: cluster_create_output
+  delegate_to: localhost
+
+- name: Run tasks when config is changed
+  block:
+    - name: Wait for 15s for cluster to be created/updated
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: Run rancher/herd/cluster/check role to get new cluster config and vars
+      ansible.builtin.include_role:
+        name: rancher/herd/cluster/check
+
+    - name: Wait for cluster to return to healthy when cluster_state != 'provisioning' or 'active'
+      ansible.builtin.include_role:
+        name: rancher/common/cluster/ready
+      when:
+        - cluster_state != 'provisioning'
+        - cluster_state != 'active'
+  when: cluster_create_output is changed # noqa no-handler

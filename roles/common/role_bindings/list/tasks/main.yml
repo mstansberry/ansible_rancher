@@ -1,0 +1,35 @@
+---
+- name: Verify that required vars are defined and populated
+  include_role:
+    name: mstansberry.ansible_rancher.required_vars
+  vars:
+    required_vars:
+      - rancher_server_url
+      - api_token
+
+- name: Get current Global Role Bindings
+  mstansberry.ansible_rancher.rancher_list:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    cluster_name: "{{ cluster_name|default(omit) }}"
+    target_type: globalRoleBinding
+  register: rancher_list_global_role_binding
+  delegate_to: localhost
+
+- name: Get current Cluster Role Template Bindings
+  mstansberry.ansible_rancher.rancher_list:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    cluster_name: "{{ cluster_name|default(omit) }}"
+    target_type: clusterRoleTemplateBinding
+  register: rancher_list_cluster_role_template_binding
+  delegate_to: localhost
+
+- name: Get current Project Role Template Bindings
+  mstansberry.ansible_rancher.rancher_list:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    cluster_name: "{{ cluster_name|default(omit) }}"
+    target_type: projectRoleTemplateBinding
+  register: rancher_list_project_role_template_binding
+  delegate_to: localhost

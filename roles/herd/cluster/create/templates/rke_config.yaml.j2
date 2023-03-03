@@ -1,0 +1,124 @@
+#
+# Cluster Config
+#
+docker_root_dir: /var/lib/docker
+enable_cluster_alerting: false
+enable_cluster_monitoring: false
+enable_network_policy: false
+local_cluster_auth_endpoint:
+  enabled: true
+name: {{ cluster_name }}
+
+#
+# Rancher Config
+#
+rancher_kubernetes_engine_config:
+  addon_job_timeout: 45
+  authentication:
+    strategy: "x509|webhook"
+  dns:
+    nodelocal:
+      ip_address: null
+      node_selector: null
+      update_strategy: {}
+  ignore_docker_version: true
+  enable_cri_dockerd: false
+
+#
+# # Currently only nginx ingress provider is supported.
+# # To disable ingress controller, set `provider: none`
+# # To enable ingress on specific nodes, use the node_selector, eg:
+#    provider: nginx
+#    node_selector:
+#      app: ingress
+#
+  ingress:
+    default_backend: false
+    http_port: 0
+    https_port: 0
+    provider: nginx
+    node_selector:
+  kubernetes_version: {{ rke_opt_kubernetes_version }}
+  monitoring:
+    provider: metrics-server
+    replicas: 1
+
+  network:
+    mtu: {{ rke_opt_cluster_mtu }}
+{% if rke_opt_cluster_cni in rancher_managed_cnis %}
+    plugin: {{ rke_opt_cluster_cni }}
+{% else %}
+    plugin: none
+{% endif %}
+{% if rke_opt_cluster_cni in ['flannel'] %}
+    flannel_network_provider:
+      iface: bond0
+{% elif rke_opt_cluster_cni in ['canal'] %}
+    canal_network_provider:
+      iface: bond0
+{% endif %}
+  rotate_encryption_key: false
+
+  services:
+    etcd:
+      backup_config:
+        enabled: true
+        interval_hours: 1
+        retention: {{ etcd_snapshot_retention }}
+        safe_timestamp: false
+{% if access_key is defined and secret_key is defined and bucket_name is defined and endpoint is defined %}
+        s3_backup_config:
+          access_key: {{ access_key }}
+          secret_key: {{ secret_key }}
+          bucket_name: {{ bucket_name }}
+          folder: {{ folder|default(cluster_name) }}
+          endpoint: {{ endpoint }}
+{% endif %}
+      creation: 12h
+      # note: all extra_args must be strings for api result comparison
+      extra_args:
+        election-timeout: "5000"
+        heartbeat-interval: "500"
+        listen-metrics-urls: "http://0.0.0.0:2381"
+      gid: 0
+      retention: 72h
+      snapshot: false
+      uid: 0
+    kube_api:
+      always_pull_images: false
+      pod_security_policy: false
+      secrets_encryption_config:
+        enabled: false
+      service_node_port_range: 30000-32767
+      service_cluster_ip_range: {{ rke_opt_cluster_service_cidr }}
+#      extra_args:
+#        feature-gates: ""
+    kube_controller:
+      # note: all extra_args must be strings for api result comparison
+      extra_args:
+        node-cidr-mask-size: "{{ rke_opt_cluster_node_cidr_mask_size }}"
+      cluster_cidr: {{ rke_opt_cluster_node_cidr }}
+      service_cluster_ip_range: {{ rke_opt_cluster_service_cidr }}
+    kubelet:
+      cluster_dns_server: {{ rke_opt_cluster_dns_server }}
+      cluster_domain: {{ cluster_domain }}
+      extra_binds:
+        - "/mnt/data:/mnt/data"
+    kubeproxy:
+      # note: all extra_args must be strings for api result comparison
+      extra_args:
+        metrics-bind-address: "0.0.0.0:10249"
+    scheduler:
+#      extra_args:
+#        feature-gates: ""
+  ssh_agent_auth: false
+  upgrade_strategy:
+    max_unavailable_controlplane: '1'
+    max_unavailable_worker: 10%
+    node_drain_input:
+      delete_local_data: false
+      force: false
+      grace_period: -1
+      ignore_daemon_sets: true
+      timeout: 120
+windows_prefered_cluster: false

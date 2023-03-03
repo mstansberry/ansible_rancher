@@ -1,0 +1,11 @@
+---
+- name: Assert that required variables are defined and populated
+  ansible.builtin.assert:
+    that:
+      - vars[required_var] is defined
+      - vars[required_var]
+    fail_msg: "Required variable '{{ required_var }}' is not defined or is empty."
+    quiet: true
+  loop_control:
+    loop_var: required_var
+  with_items: "{{ required_vars }}"

@@ -1,0 +1,4 @@
+---
+token_type: token
+token_description: automation
+token_ttl_ms: 3600000

@@ -1,0 +1,185 @@
+metadata:
+  name: {{ cluster_name }}
+  namespace: fleet-default
+spec:
+  enableNetworkPolicy: false
+  kubernetesVersion: {{ rke_opt_kubernetes_version }}
+  localClusterAuthEndpoint:
+    enabled: true
+  rkeConfig:
+    chartValues: {}
+    etcd:
+{% if cluster_cloud_credential is defined and bucket_name is defined and endpoint is defined %}
+      s3:
+        cloudCredentialName: {{ cluster_cloud_credential }}
+        bucket: {{ bucket_name }}
+        endpoint: {{ endpoint }}
+        folder: {{ folder|default(cluster_name) }}
+{% endif %}
+        skipSSLVerify: true
+#        timeout: "5m" # commented out to prevent reapply on every run due to value not present upstream
+      snapshotRetention: {{ etcd_snapshot_retention }}
+      snapshotScheduleCron: 0 * * * *
+    machineGlobalConfig:
+{% if rke_opt_cluster_node_cidr is defined %}
+      cluster-cidr: {{ rke_opt_cluster_node_cidr }}
+{% endif %}
+{% if rke_opt_cluster_dns_server is defined %}
+      cluster-dns: {{ rke_opt_cluster_dns_server }}
+{% endif %}
+      cluster-domain: {{ cluster_domain }}
+{% if rke_opt_cluster_cni != "default" %}
+      cni: 'none'
+{% endif %}
+#      disable-kube-proxy: false
+      etcd-expose-metrics: true
+      etcd-arg:
+        - "election-timeout=5000"
+        - "heartbeat-interval=500"
+#      kube-apiserver-arg:
+#        - "feature-gates="
+      kube-controller-manager-arg:
+        - "bind-address=0.0.0.0"
+{% if rke_opt_cluster_node_cidr_mask_size is defined %}
+        - "node-cidr-mask-size={{ rke_opt_cluster_node_cidr_mask_size }}"
+{% endif %}
+      kube-proxy-arg:
+        - "metrics-bind-address=0.0.0.0:10249"
+      kube-scheduler-arg:
+        - "bind-address=0.0.0.0"
+#        - "feature-gates="
+{% if rke_opt_cluster_service_cidr is defined %}
+      service-cidr: {{ rke_opt_cluster_service_cidr }}
+{% endif %}
+# Only fully disable the RKE-included ingress if expressly called for
+{% if rke_disable_ingress|bool %}
+     disable:
+       - rke2-ingress-nginx
+{% endif%}
+#      disable:
+#        - rke2-ingress-nginx
+#    machinePools:
+#      - cloudCredentialSecretName: string
+#        controlPlaneRole: boolean
+#        displayName: string
+#        drainBeforeDelete: boolean
+#        etcdRole: boolean
+#        labels:
+#          key: string
+#        machineConfigRef:
+#          apiVersion: string
+#          fieldPath: string
+#          kind: string
+#          name: string
+#          namespace: string
+#          resourceVersion: string
+#          uid: string
+#        machineDeploymentAnnotations:
+#          key: string
+#        machineDeploymentLabels:
+#          key: string
+#        machineOS: string
+#        maxUnhealthy: string
+#        name: string
+#        nodeStartupTimeout: string
+#        paused: boolean
+#        quantity: int
+#        rollingUpdate:
+#          maxSurge: string
+#          maxUnavailable: string
+#        taints:
+#          - effect: string
+#            key: string
+#            timeAdded: string
+#            value: string
+#        unhealthyNodeTimeout: string
+#        unhealthyRange: string
+#        workerRole: boolean
+    machineSelectorConfig:
+      - config:
+          protect-kernel-defaults: false
+#      - config:
+#        machineLabelSelector:
+#          matchExpressions:
+#            - key: string
+#              operator: string
+#              values:
+#                - string
+#          matchLabels:
+#            key: string
+#    registries:
+#      configs:
+#        {}
+        #authConfigSecretName: string
+#          caBundle: string
+#          insecureSkipVerify: boolean
+#          tlsSecretName: string
+#      mirrors:
+#        {}
+        #endpoint:
+#            - string
+#          rewrite:
+#            key: string
+    upgradeStrategy:
+      controlPlaneConcurrency: 10%
+#      controlPlaneDrainOptions:
+#        deleteEmptyDirData: boolean
+#        disableEviction: boolean
+#        enabled: boolean
+#        force: boolean
+#        gracePeriod: int
+#        ignoreDaemonSets: boolean
+#        ignoreErrors: boolean
+#        postDrainHooks:
+#          - annotation: string
+#        preDrainHooks:
+#          - annotation: string
+#        skipWaitForDeleteTimeoutSeconds: int
+#        timeout: int
+      workerConcurrency: 10%
+#      workerDrainOptions:
+#        deleteEmptyDirData: boolean
+#        disableEviction: boolean
+#        enabled: boolean
+#        force: boolean
+#        gracePeriod: int
+#        ignoreDaemonSets: boolean
+#        ignoreErrors: boolean
+#        postDrainHooks:
+#          - annotation: string
+#        preDrainHooks:
+#          - annotation: string
+#        skipWaitForDeleteTimeoutSeconds: int
+#        timeout: int
+#    additionalManifest: string
+#    etcdSnapshotCreate:
+#      generation: int
+#    etcdSnapshotRestore:
+#      generation: int
+#      name: string
+#      restoreRKEConfig: string
+#    infrastructureRef:
+#      apiVersion: string
+#      fieldPath: string
+#      kind: string
+#      name: string
+#      namespace: string
+#      resourceVersion: string
+#      uid: string
+#    provisionGeneration: int
+#    rotateCertificates:
+#      generation: int
+#      services:
+#        - string
+#    rotateEncryptionKeys:
+#      generation: int
+#  machineSelectorConfig:
+#    - config: {}
+#  agentEnvVars:
+#    - name: string
+#      value: string
+#  cloudCredentialSecretName: string
+#  clusterAPIConfig:
+#    clusterName: string
+#  defaultClusterRoleForProjectMembers: string
+#  redeploySystemAgentGeneration: int

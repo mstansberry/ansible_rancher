@@ -1,0 +1,30 @@
+---
+cluster_cloud_credential: "{{ cluster_name }}-cloud-credential"
+cloud_credential_endpoint: "{{ cluster_credential_endpoint + '/fleet-default' }}"
+cloud_credential_url: "{{ cloud_credential_endpoint + '/' + cluster_cloud_credential }}"
+cloud_credential_metadata:
+  name: "{{ cluster_cloud_credential }}"
+  namespace: fleet-default
+
+cluster_credential_endpoint: "{{ rancher_server_url + '/v1/secrets' }}"
+cloud_credential_action: POST
+cloud_credential_status_code: 201
+
+rke_disable_ingress: false
+
+etcd_snapshot_retention: 12
+
+rancher_managed_cnis:
+  - canal
+  #  - calico
+  - flannel
+  - weave
+
+supported_cnis:
+  - kube-router
+  - calico
+  - canal
+  - flannel
+  - weave
+  - none
+  - default

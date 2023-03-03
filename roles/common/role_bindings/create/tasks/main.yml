@@ -1,0 +1,55 @@
+---
+- name: Verify that required vars are defined and populated
+  include_role:
+    name: mstansberry.ansible_rancher.required_vars
+  vars:
+    required_vars:
+      - rancher_server_url
+      - api_token
+      - rbac_role_bindings
+
+- name: Create Global Role Bindings
+  mstansberry.ansible_rancher.rancher_global_role_binding:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    group_principal_id: "{{ item.group_principal_id|default(omit) }}"
+    user_id: "{{ item.user_id|default(omit) }}"
+    user_name: "{{ item.user_name|default(omit) }}"
+    global_role_ids: "{{ item.role_ids|default(omit) }}"
+    global_role_names: "{{ item.role_names|default(item.env_role_names[deploy_env])|default(omit) }}"
+  delegate_to: localhost
+  with_items: "{{ rbac_role_bindings['global'] }}"
+  when:
+    - '"global" in rbac_role_bindings'
+    - item.role_names is defined or item.env_role_names[deploy_env] is defined
+
+- name: Create Cluster Role Template Bindings
+  mstansberry.ansible_rancher.rancher_role_template_binding:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    context: cluster
+    cluster_id: "{{ cluster_id }}"
+    group_principal_id: "{{ item.group_principal_id|default(omit) }}"
+    user_id: "{{ item.user_id|default(omit) }}"
+    user_name: "{{ item.user_name|default(omit) }}"
+    role_template_ids: "{{ item.role_ids|default(omit) }}"
+    role_template_names: "{{ item.role_names|default(omit) }}"
+  delegate_to: localhost
+  with_items: "{{ rbac_role_bindings['cluster'] }}"
+  when: '"cluster" in rbac_role_bindings'
+
+- name: Create Project Role Template Bindings
+  mstansberry.ansible_rancher.rancher_role_template_binding:
+    rancher_url: "{{ rancher_server_url }}"
+    token: "{{ api_token }}"
+    context: project
+    cluster_id: "{{ cluster_id }}"
+    project_name: "{{ item.project_name }}"
+    group_principal_id: "{{ item.group_principal_id|default(omit) }}"
+    user_id: "{{ item.user_id|default(omit) }}"
+    user_name: "{{ item.user_name|default(omit) }}"
+    role_template_ids: "{{ item.role_ids|default(omit) }}"
+    role_template_names: "{{ item.role_names|default(omit) }}"
+  delegate_to: localhost
+  with_items: "{{ rbac_role_bindings['project'] }}"
+  when: '"project" in rbac_role_bindings'
